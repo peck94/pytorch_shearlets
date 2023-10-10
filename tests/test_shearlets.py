@@ -9,7 +9,7 @@ from pytorch_shearlets.shearlets import ShearletSystem
 def test_call():
     """Validate the regular call."""
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    shearlet_system = ShearletSystem(512, 512, 2, device)
+    shearlet_system = ShearletSystem(512, 512, 2, device=device)
 
     # load data
     x = torch.from_numpy(np.array(Image.open('tests/barbara.jpg')).reshape(1, 1, 512, 512)).to(device)
