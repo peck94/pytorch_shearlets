@@ -10,10 +10,10 @@ class ShearletSystem:
     """
     Compute a 2D shearlet system.
     """
-    def __init__(self, height, width, scales, device=torch.device('cpu')):
+    def __init__(self, height, width, scales, fname='dmaxflat4', device=torch.device('cpu')):
         levels = np.ceil(np.arange(1, scales + 1)/2).astype(int)
 
-        h0, h1 = dfilters('dmaxflat4', 'd')
+        h0, h1 = dfilters(fname, 'd')
         h0 /= np.sqrt(2)
         h1 /= np.sqrt(2)
 
