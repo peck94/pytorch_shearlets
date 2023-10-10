@@ -28,10 +28,17 @@ class ShearletSystem:
         self.shearlets, self.RMS, self.dualFrameWeights = SLgetShearlets2D(self.preparedFilters, self.shearletIdxs)
         self.device = device
 
-        self.shearlets = torch.from_numpy(self.shearlets).to(device)
+        self.shearlets = torch.from_numpy(self.shearlets.reshape(1, 1, *self.shearlets.shape)).to(device)
         self.dualFrameWeights = torch.from_numpy(self.dualFrameWeights).to(device)
 
     def decompose(self, x):
+        """
+        Shearlet decomposition of 2D data.
+
+        :param x: Input images. Tensor of shape [N, C, H, W].
+        :return: Shearlet coefficients. Tensor of shape [N, C, H, W, M].
+        """
+
         # initialize coefficient array
         coeffs = torch.zeros(self.shearlets.shape, dtype=torch.cfloat).to(self.device)
 
@@ -40,18 +47,24 @@ class ShearletSystem:
 
         # compute shearlet coefficients at each scale
         for j in range(self.shearletIdxs.shape[0]):
-            coeffs[:,:,j] = fftshift(ifft2(ifftshift(x_freq * torch.conj(self.shearlets[:,:,j]))))
+            coeffs[:,:,:,:,j] = fftshift(ifft2(ifftshift(x_freq * torch.conj(self.shearlets[:,:,:,:,j]))))
 
         # return real coefficients
         return torch.real(coeffs).to(self.device)
 
     def reconstruct(self, coeffs):
+        """
+        2D reconstruction of shearlet coefficients.
+
+        :param coeffs: Shearlet coefficients. Tensor of shape [N, C, H, W, M].
+        :return: Reconstructed images. Tensor of shape [N, C, H, W].
+        """
         # initialize image array
         x = torch.zeros((coeffs.shape[0], coeffs.shape[1]), dtype=torch.cfloat).to(self.device)
 
         # compute image values
         for j in range(self.shearletIdxs.shape[0]):
-            x = x + fftshift(fft2(ifftshift(coeffs[:,:,j])))*self.shearlets[:,:,j]
+            x = x + fftshift(fft2(ifftshift(coeffs[:,:,:,:,j]))) * self.shearlets[:,:,:,:,j]
 
         x = fftshift(ifft2(ifftshift((torch.div(x, self.dualFrameWeights)))))
 

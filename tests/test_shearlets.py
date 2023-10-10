@@ -12,7 +12,7 @@ def test_call():
     shearlet_system = ShearletSystem(512, 512, 2, device)
 
     # load data
-    x = torch.from_numpy(np.array(Image.open('tests/barbara.jpg'))).to(device)
+    x = torch.from_numpy(np.array(Image.open('tests/barbara.jpg')).reshape(1, 1, 512, 512)).to(device)
 
     # decomposition
     coeffs = shearlet_system.decompose(x)
