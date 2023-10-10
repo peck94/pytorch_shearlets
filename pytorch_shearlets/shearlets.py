@@ -33,7 +33,7 @@ class ShearletSystem:
 
     def decompose(self, x):
         # initialize coefficient array
-        coeffs = torch.zeros(self.shearlets.shape, dtype=torch.cfloat)
+        coeffs = torch.zeros(self.shearlets.shape, dtype=torch.cfloat).to(self.device)
 
         # get data in frequency domain
         x_freq = fftshift(fft2(ifftshift(x)))
@@ -47,7 +47,7 @@ class ShearletSystem:
 
     def reconstruct(self, coeffs):
         # initialize image array
-        x = torch.zeros((coeffs.shape[0], coeffs.shape[1]), dtype=torch.cfloat)
+        x = torch.zeros((coeffs.shape[0], coeffs.shape[1]), dtype=torch.cfloat).to(self.device)
 
         # compute image values
         for j in range(self.shearletIdxs.shape[0]):
