@@ -1,4 +1,5 @@
 import torch
+from torch.fft import fft2, ifft2, fftshift, ifftshift
 
 import numpy as np
 
@@ -27,8 +28,32 @@ class ShearletSystem:
         self.shearlets, self.RMS, self.dualFrameWeights = SLgetShearlets2D(self.preparedFilters, self.shearletIdxs)
         self.device = device
 
+        self.shearlets = torch.from_numpy(self.shearlets).to(device)
+        self.dualFrameWeights = torch.from_numpy(self.dualFrameWeights).to(device)
+
     def decompose(self, x):
-        pass
+        # initialize coefficient array
+        coeffs = torch.zeros(self.shearlets.shape, dtype=torch.cfloat)
+
+        # get data in frequency domain
+        x_freq = fftshift(fft2(ifftshift(x)))
+
+        # compute shearlet coefficients at each scale
+        for j in range(self.shearletIdxs.shape[0]):
+            coeffs[:,:,j] = fftshift(ifft2(ifftshift(x_freq * torch.conj(self.shearlets[:,:,j]))))
+
+        # return real coefficients
+        return torch.real(coeffs).to(self.device)
 
     def reconstruct(self, coeffs):
-        pass
+        # initialize image array
+        x = torch.zeros((coeffs.shape[0], coeffs.shape[1]), dtype=torch.cfloat)
+
+        # compute image values
+        for j in range(self.shearletIdxs.shape[0]):
+            x = x + fftshift(fft2(ifftshift(coeffs[:,:,j])))*self.shearlets[:,:,j]
+
+        x = fftshift(ifft2(ifftshift((torch.div(x, self.dualFrameWeights)))))
+
+        # return real values
+        return torch.real(x)
