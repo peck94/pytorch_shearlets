@@ -39,7 +39,7 @@ class ShearletSystem:
         :return: Shearlet coefficients. Tensor of shape [N, C, H, W, M].
         """
         # get data in frequency domain
-        x_freq = torch.unsqueeze(fftshift(fft2(ifftshift(x))), -1)
+        x_freq = torch.unsqueeze(fftshift(fft2(ifftshift(x.to(self.device)))), -1)
 
         # compute shearlet coefficients at each scale
         coeffs = fftshift(
@@ -50,7 +50,7 @@ class ShearletSystem:
                 dim=[0, 1, 2, 3])
 
         # return real coefficients
-        return torch.real(coeffs).to(self.device)
+        return torch.real(coeffs)
 
     def reconstruct(self, coeffs):
         """
@@ -62,7 +62,7 @@ class ShearletSystem:
         # compute image values
         s = fftshift(
             fft2(
-                ifftshift(coeffs, dim=[0, 1, 2, 3]),
+                ifftshift(coeffs.to(self.device), dim=[0, 1, 2, 3]),
                 dim=[-3, -2]),
             dim=[0, 1, 2, 3]) * self.shearlets
         x = fftshift(ifft2(ifftshift((torch.div(torch.sum(s, dim=-1), self.dualFrameWeights)))))
