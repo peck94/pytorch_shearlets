@@ -59,14 +59,13 @@ class ShearletSystem:
         :param coeffs: Shearlet coefficients. Tensor of shape [N, C, H, W, M].
         :return: Reconstructed images. Tensor of shape [N, C, H, W].
         """
-        # initialize image array
-        x = torch.zeros(coeffs.shape[:4], dtype=torch.cfloat).to(self.device)
-
         # compute image values
-        for j in range(self.shearletIdxs.shape[0]):
-            x = x + fftshift(fft2(ifftshift(coeffs[:,:,:,:,j]))) * self.shearlets[:,:,:,:,j]
-
-        x = fftshift(ifft2(ifftshift((torch.div(x, self.dualFrameWeights)))))
+        s = fftshift(
+            fft2(
+                ifftshift(coeffs, dim=[0, 1, 2, 3]),
+                dim=[-3, -2]),
+            dim=[0, 1, 2, 3]) * self.shearlets
+        x = fftshift(ifft2(ifftshift((torch.div(torch.sum(s, dim=-1), self.dualFrameWeights)))))
 
         # return real values
         return torch.real(x)
