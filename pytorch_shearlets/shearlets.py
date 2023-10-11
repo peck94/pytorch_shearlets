@@ -38,16 +38,16 @@ class ShearletSystem:
         :param x: Input images. Tensor of shape [N, C, H, W].
         :return: Shearlet coefficients. Tensor of shape [N, C, H, W, M].
         """
-
-        # initialize coefficient array
-        coeffs = torch.zeros([x.shape[0], x.shape[1], *self.shearlets.shape[2:]], dtype=torch.cfloat).to(self.device)
-
         # get data in frequency domain
-        x_freq = fftshift(fft2(ifftshift(x)))
+        x_freq = torch.unsqueeze(fftshift(fft2(ifftshift(x))), -1)
 
         # compute shearlet coefficients at each scale
-        for j in range(self.shearletIdxs.shape[0]):
-            coeffs[:,:,:,:,j] = fftshift(ifft2(ifftshift(x_freq * torch.conj(self.shearlets[:,:,:,:,j]))))
+        coeffs = fftshift(
+            ifft2(
+                ifftshift(
+                    x_freq * torch.conj(self.shearlets), dim=[0, 1, 2, 3]),
+                    dim=[-3, -2]),
+                dim=[0, 1, 2, 3])
 
         # return real coefficients
         return torch.real(coeffs).to(self.device)
