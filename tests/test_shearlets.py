@@ -1,5 +1,7 @@
 import pytest
 
+import matplotlib.pyplot as plt
+
 import numpy as np
 
 import torch
@@ -37,25 +39,36 @@ def test_call(shearletSystem, device):
 
     # load data
     sigma = 25
-    img = np.array(Image.open('tests/barbara.jpg'))
-    x = torch.from_numpy(img + sigma*np.random.randn(512, 512)).reshape(1, 1, 512, 512).to(device)
+    img = torch.from_numpy(np.array(Image.open('tests/barbara.jpg')).reshape(1, 1, 512, 512)).to(device)
 
-    # decomposition
-    coeffs = shearletSystem.decompose(x)
+    # compute mean PSNR
+    psnrs = []
+    for _ in range(10):
+        # create noise
+        noise = sigma * torch.randn(512, 512).to(device)
 
-    # thresholding
-    thresholdingFactor = 3
-    weights = torch.ones_like(coeffs)
-    for j in range(len(shearletSystem.RMS)):
-        weights[:,:,:,:,j] = shearletSystem.RMS[j] * torch.ones(512, 512)
-    zero_indices = torch.abs(coeffs) / (thresholdingFactor * weights * sigma) < 1
-    coeffs[zero_indices] = 0
+        # decomposition
+        coeffs = shearletSystem.decompose(img + noise)
 
-    # reconstruction
-    x_hat = shearletSystem.reconstruct(coeffs)
+        # thresholding
+        thresholdingFactor = 3
+        weights = torch.ones_like(coeffs)
+        for j in range(len(shearletSystem.RMS)):
+            weights[:,:,:,:,j] = shearletSystem.RMS[j] * torch.ones(512, 512)
+        zero_indices = (torch.abs(coeffs) / (thresholdingFactor * weights * sigma) < 1)
+        new_coeffs = torch.where(zero_indices, torch.zeros_like(coeffs), coeffs)
 
-    # compute PSNR
-    mse = np.mean((img - x_hat.cpu().numpy()) ** 2)
-    max_pixel = img.max()
-    psnr = 20 * np.log10(max_pixel / np.sqrt(mse))
-    print(f'PSNR: {psnr:.2f}')
+        # reconstruction
+        x_hat = shearletSystem.reconstruct(new_coeffs)
+
+        # compute PSNR
+        mse = np.mean((img.cpu().numpy() - x_hat.cpu().numpy()) ** 2)
+        psnr = 20 * np.log10(255 / np.sqrt(mse))
+        psnrs.append(psnr)
+
+    # compute result
+    mean_psnr = np.mean(psnrs)
+    std_psnr = np.std(psnrs)
+    print(f'PSNR: {mean_psnr:.2f} dB ({std_psnr:.2f})')
+
+    assert mean_psnr > 25, f'PSNR is too low: {psnr:.2f} < 25 dB'
