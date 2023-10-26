@@ -57,9 +57,7 @@ def test_call(shearletSystem, device):
 
         # thresholding
         thresholdingFactor = 3
-        weights = torch.ones_like(coeffs)
-        for j in range(len(shearletSystem.RMS)):
-            weights[:,:,:,:,j] = shearletSystem.RMS[j] * torch.ones(512, 512)
+        weights = shearletSystem.RMS * torch.ones_like(coeffs)
         zero_indices = (torch.abs(coeffs) / (thresholdingFactor * weights * sigma) < 1)
         new_coeffs = torch.where(zero_indices, torch.zeros_like(coeffs), coeffs)
 

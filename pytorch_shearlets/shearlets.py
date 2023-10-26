@@ -30,6 +30,7 @@ class ShearletSystem:
 
         self.shearlets = torch.from_numpy(self.shearlets.reshape(1, 1, *self.shearlets.shape)).to(device)
         self.dualFrameWeights = torch.from_numpy(self.dualFrameWeights).to(device)
+        self.RMS = torch.from_numpy(self.RMS).to(device)
 
     def decompose(self, x):
         """
