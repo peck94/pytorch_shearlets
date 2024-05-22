@@ -11,6 +11,9 @@ authors = [
 description = "2D Shearlet Transforms in PyTorch"
 readme = "README.md"
 requires-python = ">=3.7"
+dependencies = [
+  "pyshearlab@git+https://github.com/stefanloock/pyshearlab"
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -20,3 +23,6 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/pypa/sampleproject"
 "Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
+
+[tool.hatch.metadata]
+allow-direct-references = true
