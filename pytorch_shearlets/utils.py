@@ -159,7 +159,7 @@ def SLcheckFilterSizes(rows,cols, shearLevels,directionalFilter,scalingFilter,
     if success == 0:
         sys.exit("The specified Shearlet system is not available for data of size "
             + str(rows) + "x" + str(cols) + ". Try decreasing the number of scales and shearings.")
-    if success == 1 and k>1:
+    if success == 1 and k>0:
         print("Warning: The specified Shearlet system was not available for data of size " + str(rows) + "x" + str(cols) + ". Filters were automatically set to configuration " + str(k) + "(see SLcheckFilterSizes).")
         return directionalFilter, scalingFilter, waveletFilter, scalingFilter2
     else:
