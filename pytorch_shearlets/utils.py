@@ -671,7 +671,7 @@ def SLpadArray(array, newSize):
             paddedArray[padSizes[1], padSizes[0]:padSizes[0]+currSize[0]+idxModifier[0]] = array
         else:
             paddedArray[padSizes[0]-idxModifier[0]:padSizes[0]+currSize[0]-idxModifier[0],
-                    padSizes[1]:padSizes[1]+currSize[1]+idxModifier[1]] = array
+                    padSizes[1]+idxModifier[1]:padSizes[1]+currSize[1]+idxModifier[1]] = array
     return paddedArray
 
 
