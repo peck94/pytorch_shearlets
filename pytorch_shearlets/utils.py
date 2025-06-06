@@ -10,6 +10,7 @@ Stefan Loock, February 2, 2017 [sloock@gwdg.de]
 
 from __future__ import division
 import sys
+import torch
 import numpy as np
 import scipy as scipy
 import scipy.io as sio
@@ -824,3 +825,149 @@ def SLupsample(array, dims, nZeros):
 
 #
 ##############################################################################
+
+
+##############################################################################
+#
+
+def down2D(t, d,dims=(-2,-1)):
+    """
+    Input:
+        t: tensor to subsample 
+        d: decimation factor
+        dims: (x,y) which gives the height and width dimension indices (s.t. t.shape[x] == H and t.shape[y] == W )
+    Output:
+        subsampled tensor
+    """
+
+    H, W = t.shape[dims[0]], t.shape[dims[1]]
+    if H % d != 0:
+        print(f'Warning: dimension {H} is not divisible by {d}')
+
+    ndims = len(t.shape)
+    rowIdxs = [slice(None)]*ndims
+    rowIdxs[dims[0]] = slice(0,H,d)
+    colIdxs = [slice(None)]*ndims
+    colIdxs[dims[1]] = slice(0,W,d)
+    
+    return t[*rowIdxs][*colIdxs].detach().clone()
+
+
+def up2D(t,d,dims=(-2,-1)):
+    """
+    2D upscaling of tensor
+
+    Input
+    -----
+        t : tensor to zero-upsample 
+        d : upsample factor
+        dims : (x,y) which gives the height and width dimension indices (s.t. t.shape[x] == H and t.shape[y] == W )
+    
+    Output
+    -----
+        tensor t upsampled by filling in zeros & elements scaled with factor d**2
+    
+    Warning
+    -----
+        We assume there is no extra padding needed to get to the desired upscaled resolution
+
+    """
+    # Fill in zero rows
+    H, W = t.shape[dims[0]], t.shape[dims[1]]
+    uH, uW = d*H, d*W 
+    newshape = list(t.shape)
+    ndims = len(t.shape)
+    newshape[dims[0]] = uH 
+    newshape[dims[1]] = uW
+
+    rowIdxs = [slice(None)]*ndims
+    rowIdxs[dims[0]] = slice(0,uH,d)
+    colIdxs = [slice(None)]*ndims
+    colIdxs[dims[1]] = slice(0,uW,d)
+
+    device = t.device 
+    r = torch.zeros(newshape,device=device)
+    r[*rowIdxs][*colIdxs] = t 
+
+    return r.detach()
+    
+
+def subsampleBands(t,idxs,decimFactors):
+    """
+    Input
+    -----
+        t : tensor [N, C, H, W, M] of M shearlet bands 
+        idxs : an array of size M where idxs[m] = s indicates to which scale s band m belongs
+        decimFactors : reverse(decimFactors)[i] gives the decimation factor required for scale i
+    
+    Output
+    -----
+        dictionary R where R[d] gives the tensor [N, C, Hd, Wd, Md] of bands that are decimated by factor d
+    """
+    idxsPerDecim = getIdxsPerDecim(idxs,decimFactors)
+    result = dict()
+    for d in decimFactors:
+        # Downscale relevant bands
+        bands = down2D(t[...,idxsPerDecim[d]],d,dims=(-3,-2))
+        result[d] = bands
+    return result 
+
+def upAndMergeBands(bandsDict,idxs,decimFactors):
+    """
+    Input
+    -----
+        bandsDict : dictionary of bands where bandsDict[d] gives the tensor [N, C, Hd, Wd, Md] of the Md bands decimated by factor d
+        idxs : an array of size M where idxs[m] = s indicates to which scale s band m belongs
+        decimFactors : reverse(decimFactors)[i] gives the decimation factor required for scale i
+    Output
+    -----
+        NxCxHxWxM tensor of shearlet bands where M = sum(Md for d) 
+    
+    """
+    idxsPerDecim = getIdxsPerDecim(idxs,decimFactors)
+    
+    M = 0
+    uppedDict = dict()
+    for d,t in bandsDict.items():
+        bands = up2D(t,d,dims=(-3,-2))
+        uppedDict[d] = bands
+        N, C, H, W, m = bands.shape
+        M += m
+    
+    device = bands.device
+    result = torch.zeros((N,C,H,W,M),device=device)
+
+    # Can be done in previous loop if we know H,W,M beforehand
+    for d,t in uppedDict.items():
+        result[...,idxsPerDecim[d]] = t*(d**2) # Scale elements with factor d (once per dimension) to make up for "lost energy" 
+    
+    return result 
+
+
+
+
+def getIdxsPerDecim(idxs, decimFactors):
+    """
+    Input
+    -----
+        idxs : an array of size M where idxs[m] = s indicates to which scale s band m belongs
+        decimFactors : reverse(decimFactors)[i] gives the decimation factor required for scale i
+    Output
+    -----
+        A dict R where R[d] gives the tuple of band indices which require a decimation factor d
+    """
+    scales = len(decimFactors) # Number of scales, including lowpass scale 0
+    decimFactors = np.flip(decimFactors)
+    result = dict()
+    for d in decimFactors:
+        # Avoid processing the same decimation factor twice
+        if result.get(d) is not None:
+            continue
+
+        d_band_indices = ()
+        for scale in [s for s in range(scales) if decimFactors[s] == d]:
+            for m in range(len(idxs)):
+                if idxs[m] == scale:
+                    d_band_indices += (m,)
+        result[d] = d_band_indices
+    return result 

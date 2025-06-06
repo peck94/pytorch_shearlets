@@ -3,8 +3,8 @@ from torch.fft import fft2, ifft2, fftshift, ifftshift
 
 import numpy as np
 
-from .utils import SLprepareFilters2D, SLgetShearletIdxs2D, SLgetShearlets2D
 from .filters import dfilters, modulate2, MakeONFilter
+from .utils import SLprepareFilters2D, SLgetShearletIdxs2D, SLgetShearlets2D, upAndMergeBands, subsampleBands
 
 class ShearletSystem:
     """
@@ -76,3 +76,47 @@ class ShearletSystem:
 
         # return real values
         return torch.real(x)
+
+    def decompose_subsample(self, x, decimFactors):
+        """
+        2D Shearlet decomposition followed by subsampling
+
+        Input
+        -----
+            x : Input images, tensor of shape [N, C, H, W]
+            decimFactors : reverse(decimFactors)[i] gives the decimation factor required for scale i
+        
+        Output
+        -----
+            dictionary R where R[d] gives the tensor [N, C, Hd, Wd, Md] of bands that are decimated by factor d
+        """
+        decomposed = self.decompose(x)
+        bandsDict = subsampleBands(decomposed,self.shearletIdxs[:,1],decimFactors)
+
+        return bandsDict
+
+
+    def upsample_reconstruct(self, x, decimFactors):
+        """
+        2D reconstruction of downsampled shearlet bands
+
+        Input
+        -----
+            x : dictionary of bands where x[d] gives the tensor [N, C, Hd, Wd, Md] of the Md bands decimated by factor d
+            
+            decimFactors : reverse(decimFactors)[i] gives the decimation factor required for scale i
+
+        Output
+        -----
+            Reconstructed images. Tensor of shape [N, C, H, W]
+        
+        Warning
+        -----
+            Might need to clamp to correct range after reconstruction
+
+        """
+
+        merged_bands = upAndMergeBands(x,self.shearletIdxs[:,1],decimFactors)
+        reconstructed = self.reconstruct(merged_bands)
+    
+        return reconstructed
