@@ -3,14 +3,14 @@ from torch.fft import fft2, ifft2, fftshift, ifftshift
 
 import numpy as np
 
-from .filters import dfilters, modulate2
 from .utils import SLprepareFilters2D, SLgetShearletIdxs2D, SLgetShearlets2D
+from .filters import dfilters, modulate2, MakeONFilter
 
 class ShearletSystem:
     """
     Compute a 2D shearlet system.
     """
-    def __init__(self, height, width, scales, fname='dmaxflat4', device=torch.device('cpu')):
+    def __init__(self, height, width, scales, fname='dmaxflat4', qmtype=None, device=torch.device('cpu')):
         levels = np.ceil(np.arange(1, scales + 1)/2).astype(int)
 
         h0, h1 = dfilters(fname, 'd')
@@ -19,10 +19,16 @@ class ShearletSystem:
 
         directionalFilter = modulate2(h0, 'c')
 
-        quadratureMirrorFilter = np.array([0.0104933261758410, -0.0263483047033631, -0.0517766952966370,
+        if qmtype is not None:
+            if qmtype.lower() =="meyer24":
+                quadratureMirrorFilter = MakeONFilter("Meyer",24)
+            elif qmtype.lower() == "meyer32":
+                quadratureMirrorFilter = MakeONFilter("Meyer",32)
+        else:
+            quadratureMirrorFilter = np.array([0.0104933261758410, -0.0263483047033631, -0.0517766952966370,
                                            0.276348304703363, 0.582566738241592, 0.276348304703363,
                                            -0.0517766952966369, -0.0263483047033631, 0.0104933261758408])
-        
+               
         self.preparedFilters = SLprepareFilters2D(height, width, scales, levels, directionalFilter, quadratureMirrorFilter)
         self.shearletIdxs = SLgetShearletIdxs2D(levels, 0)
         self.shearlets, self.RMS, self.dualFrameWeights = SLgetShearlets2D(self.preparedFilters, self.shearletIdxs)
