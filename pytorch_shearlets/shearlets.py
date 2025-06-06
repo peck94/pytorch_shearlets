@@ -3,14 +3,14 @@ from torch.fft import fft2, ifft2, fftshift, ifftshift
 
 import numpy as np
 
-from .filters import dfilters, modulate2
-from .utils import SLprepareFilters2D, SLgetShearletIdxs2D, SLgetShearlets2D
+from .filters import dfilters, modulate2, MakeONFilter
+from .utils import SLprepareFilters2D, SLgetShearletIdxs2D, SLgetShearlets2D, upAndMergeBands, subsampleBands
 
 class ShearletSystem:
     """
     Compute a 2D shearlet system.
     """
-    def __init__(self, height, width, scales, fname='dmaxflat4', device=torch.device('cpu')):
+    def __init__(self, height, width, scales, fname='dmaxflat4', qmtype=None, device=torch.device('cpu')):
         levels = np.ceil(np.arange(1, scales + 1)/2).astype(int)
 
         h0, h1 = dfilters(fname, 'd')
@@ -19,10 +19,16 @@ class ShearletSystem:
 
         directionalFilter = modulate2(h0, 'c')
 
-        quadratureMirrorFilter = np.array([0.0104933261758410, -0.0263483047033631, -0.0517766952966370,
+        if qmtype is not None:
+            if qmtype.lower() =="meyer24":
+                quadratureMirrorFilter = MakeONFilter("Meyer",24)
+            elif qmtype.lower() == "meyer32":
+                quadratureMirrorFilter = MakeONFilter("Meyer",32)
+        else:
+            quadratureMirrorFilter = np.array([0.0104933261758410, -0.0263483047033631, -0.0517766952966370,
                                            0.276348304703363, 0.582566738241592, 0.276348304703363,
                                            -0.0517766952966369, -0.0263483047033631, 0.0104933261758408])
-        
+               
         self.preparedFilters = SLprepareFilters2D(height, width, scales, levels, directionalFilter, quadratureMirrorFilter)
         self.shearletIdxs = SLgetShearletIdxs2D(levels, 0)
         self.shearlets, self.RMS, self.dualFrameWeights = SLgetShearlets2D(self.preparedFilters, self.shearletIdxs)
@@ -70,3 +76,47 @@ class ShearletSystem:
 
         # return real values
         return torch.real(x)
+
+    def decompose_subsample(self, x, decimFactors):
+        """
+        2D Shearlet decomposition followed by subsampling
+
+        Input
+        -----
+            x : Input images, tensor of shape [N, C, H, W]
+            decimFactors : reverse(decimFactors)[i] gives the decimation factor required for scale i
+        
+        Output
+        -----
+            dictionary R where R[d] gives the tensor [N, C, Hd, Wd, Md] of bands that are decimated by factor d
+        """
+        decomposed = self.decompose(x)
+        bandsDict = subsampleBands(decomposed,self.shearletIdxs[:,1],decimFactors)
+
+        return bandsDict
+
+
+    def upsample_reconstruct(self, x, decimFactors):
+        """
+        2D reconstruction of downsampled shearlet bands
+
+        Input
+        -----
+            x : dictionary of bands where x[d] gives the tensor [N, C, Hd, Wd, Md] of the Md bands decimated by factor d
+            
+            decimFactors : reverse(decimFactors)[i] gives the decimation factor required for scale i
+
+        Output
+        -----
+            Reconstructed images. Tensor of shape [N, C, H, W]
+        
+        Warning
+        -----
+            Might need to clamp to correct range after reconstruction
+
+        """
+
+        merged_bands = upAndMergeBands(x,self.shearletIdxs[:,1],decimFactors)
+        reconstructed = self.reconstruct(merged_bands)
+    
+        return reconstructed
