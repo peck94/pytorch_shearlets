@@ -850,7 +850,7 @@ def down2D(t, d,dims=(-2,-1)):
     colIdxs = [slice(None)]*ndims
     colIdxs[dims[1]] = slice(0,W,d)
     
-    return t[*rowIdxs][*colIdxs].detach().clone()
+    return t[*rowIdxs][*colIdxs]
 
 
 def up2D(t,d,dims=(-2,-1)):
@@ -889,7 +889,7 @@ def up2D(t,d,dims=(-2,-1)):
     r = torch.zeros(newshape,device=device)
     r[*rowIdxs][*colIdxs] = t 
 
-    return r.detach()
+    return r
     
 
 def subsampleBands(t,idxs,decimFactors):
