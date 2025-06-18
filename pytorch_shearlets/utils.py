@@ -850,7 +850,7 @@ def down2D(t, d,dims=(-2,-1)):
     colIdxs = [slice(None)]*ndims
     colIdxs[dims[1]] = slice(0,W,d)
     
-    return t[*rowIdxs][*colIdxs]
+    return t[rowIdxs][colIdxs]
 
 
 def up2D(t,d,dims=(-2,-1)):
@@ -887,7 +887,7 @@ def up2D(t,d,dims=(-2,-1)):
 
     device = t.device 
     r = torch.zeros(newshape,device=device)
-    r[*rowIdxs][*colIdxs] = t 
+    r[rowIdxs][colIdxs] = t 
 
     return r
     
