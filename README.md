@@ -7,7 +7,7 @@ This repository contains a rudimentary implementation of the shearlet transform 
 You can install this package directly using pip:
 
 ```console
-pip install https://github.com/peck94/pytorch_shearlets/archive/refs/heads/main.zip
+pip install git+https://github.com/peck94/pytorch_shearlets
 ```
 
 Any dependencies should be taken care of automatically.
