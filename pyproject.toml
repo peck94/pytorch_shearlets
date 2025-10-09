@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytorch-shearlets"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name="Jonathan Peck", email="jonathan.peck@ugent.be" },
 ]
@@ -12,6 +12,7 @@ description = "2D Shearlet Transforms in PyTorch"
 readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
+  "torch",
   "pyshearlab@git+https://github.com/stefanloock/pyshearlab"
 ]
 classifiers = [
@@ -21,8 +22,8 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/pypa/sampleproject"
-"Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
+"Homepage" = "https://github.com/peck94/pytorch_shearlets"
+"Bug Tracker" = "https://github.com/peck94/pytorch_shearlets/issues"
 
 [tool.hatch.metadata]
 allow-direct-references = true
